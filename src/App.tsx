@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
+import type {
+  MapLayerMouseEvent,
+  MapRef,
+  LayerProps,
+} from "react-map-gl/maplibre";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -14,11 +18,9 @@ const ATLANTA_CENTER = {
 const MAP_STYLE =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
-// Paint uses feature-state for hover (GPU-direct, no React re-render)
-// and feature-state for selected (set on click)
-const FILL_LAYER = {
+const FILL_LAYER: LayerProps = {
   id: "neighborhoods-fill",
-  type: "fill" as const,
+  type: "fill",
   source: SOURCE_ID,
   paint: {
     "fill-color": [
@@ -28,7 +30,7 @@ const FILL_LAYER = {
       ["boolean", ["feature-state", "hover"], false],
       "#6366f1",
       "#4f46e5",
-    ] as any,
+    ],
     "fill-opacity": [
       "case",
       ["boolean", ["feature-state", "selected"], false],
@@ -36,13 +38,13 @@ const FILL_LAYER = {
       ["boolean", ["feature-state", "hover"], false],
       0.38,
       0.18,
-    ] as any,
+    ],
   },
 };
 
-const LINE_LAYER = {
+const LINE_LAYER: LayerProps = {
   id: "neighborhoods-outline",
-  type: "line" as const,
+  type: "line",
   source: SOURCE_ID,
   paint: {
     "line-color": [
@@ -52,7 +54,7 @@ const LINE_LAYER = {
       ["boolean", ["feature-state", "hover"], false],
       "#6366f1",
       "#4f46e5",
-    ] as any,
+    ],
     "line-width": [
       "case",
       ["boolean", ["feature-state", "selected"], false],
@@ -60,43 +62,58 @@ const LINE_LAYER = {
       ["boolean", ["feature-state", "hover"], false],
       2.5,
       1.5,
-    ] as any,
+    ],
   },
 };
 
+interface NeighborhoodProperties {
+  OBJECTID: number;
+  NAME: string;
+  OLDNAME?: string;
+  GEOTYPE?: string;
+  ACRES?: number | string;
+  SQMILES?: number | string;
+  NPU?: string;
+  LAST_EDITED_USER?: string;
+  LAST_EDITED_DATE?: string;
+  GLOBALID?: string;
+}
+
+interface NeighborhoodFeature {
+  properties: NeighborhoodProperties;
+}
+
 function App() {
   const mapRef = useRef<MapRef>(null);
-  const [data, setData] = useState<any>(null);
-  const [selectedFeature, setSelectedFeature] = useState<any>(null);
+  const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [selectedFeature, setSelectedFeature] =
+    useState<NeighborhoodFeature | null>(null);
 
-  // Refs to track current hover/selected IDs without triggering re-renders
   const hoveredIdRef = useRef<number | null>(null);
   const selectedIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}atlanta-neighborhood.geojson`)
       .then((res) => res.json())
-      .then((json) => setData(json))
-      .catch((err) => console.error("Error loading geojson:", err));
+      .then((json: GeoJSON.FeatureCollection) => setData(json))
+      .catch((err: unknown) => console.error("Error loading geojson:", err));
   }, []);
 
-  // ── Hover: pure feature-state, zero React re-renders ──────────────────────
   const onMouseMove = useCallback((event: MapLayerMouseEvent) => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
     const feature = event.features?.[0];
-    const newId: number | null = feature?.properties?.OBJECTID ?? null;
+    const newId: number | null =
+      (feature?.properties as NeighborhoodProperties)?.OBJECTID ?? null;
 
     if (hoveredIdRef.current !== newId) {
-      // Clear previous hover
       if (hoveredIdRef.current !== null) {
         map.setFeatureState(
           { source: SOURCE_ID, id: hoveredIdRef.current },
           { hover: false },
         );
       }
-      // Set new hover
       if (newId !== null) {
         map.setFeatureState({ source: SOURCE_ID, id: newId }, { hover: true });
       }
@@ -119,15 +136,14 @@ function App() {
     map.getCanvas().style.cursor = "";
   }, []);
 
-  // ── Click: feature-state for selected + React state for panel ─────────────
   const onMapClick = useCallback((event: MapLayerMouseEvent) => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
     const feature = event.features?.[0];
-    const newId: number | null = feature?.properties?.OBJECTID ?? null;
+    const newId: number | null =
+      (feature?.properties as NeighborhoodProperties)?.OBJECTID ?? null;
 
-    // Clear previous selection
     if (selectedIdRef.current !== null) {
       map.setFeatureState(
         { source: SOURCE_ID, id: selectedIdRef.current },
@@ -135,13 +151,16 @@ function App() {
       );
     }
 
-    // Apply new selection
     if (newId !== null) {
       map.setFeatureState({ source: SOURCE_ID, id: newId }, { selected: true });
     }
 
     selectedIdRef.current = newId;
-    setSelectedFeature(feature ?? null);
+    setSelectedFeature(
+      feature
+        ? { properties: feature.properties as NeighborhoodProperties }
+        : null,
+    ); // ✅
   }, []);
 
   const closePanel = useCallback(() => {
@@ -160,7 +179,6 @@ function App() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* ── Map ── */}
       <Map
         ref={mapRef}
         initialViewState={ATLANTA_CENTER}
@@ -184,7 +202,6 @@ function App() {
         )}
       </Map>
 
-      {/* ── Header chip ── */}
       <div className="absolute top-5 left-5 z-10 bg-white/85 backdrop-blur-md rounded-2xl px-5 py-3.5 shadow-lg border border-white/60 pointer-events-none">
         <p className="text-[17px] font-extrabold text-indigo-950 tracking-tight leading-none">
           Atlanta Neighborhoods
@@ -194,10 +211,8 @@ function App() {
         </p>
       </div>
 
-      {/* ── Side panel ── */}
       {selectedFeature && p && (
         <div className="absolute top-0 right-0 h-full w-80 z-20 bg-white backdrop-blur-xl border-l border-indigo-100 shadow-[-8px_0_32px_rgba(79,70,229,0.1)] flex flex-col animate-[slideIn_0.22s_ease-out]">
-          {/* Header */}
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 px-6 pt-7 pb-6 relative">
             <button
               onClick={closePanel}
@@ -222,11 +237,16 @@ function App() {
             )}
           </div>
 
-          {/* Stats row */}
           <div className="grid grid-cols-3 border-b border-indigo-50">
             {[
-              { label: "Acres", value: p.ACRES?.toFixed(1) ?? "—" },
-              { label: "Sq MI", value: p.SQMILES?.toFixed(2) ?? "—" },
+              {
+                label: "Acres",
+                value: p.ACRES != null ? Number(p.ACRES).toFixed(1) : "—",
+              },
+              {
+                label: "Sq MI",
+                value: p.SQMILES != null ? Number(p.SQMILES).toFixed(2) : "—",
+              },
               { label: "NPU", value: p.NPU ?? "—" },
             ].map(({ label, value }) => (
               <div
@@ -243,7 +263,6 @@ function App() {
             ))}
           </div>
 
-          {/* Details */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mb-4">
               Details
