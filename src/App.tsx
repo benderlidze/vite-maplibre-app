@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { MapLayerMouseEvent, MapRef } from 'react-map-gl/maplibre';
-import Map, { Source, Layer } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
+import Map, { Source, Layer } from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
 
-const SOURCE_ID = 'neighborhoods';
+const SOURCE_ID = "neighborhoods";
 
 const ATLANTA_CENTER = {
   longitude: -84.388,
@@ -11,45 +11,54 @@ const ATLANTA_CENTER = {
   zoom: 11,
 };
 
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const MAP_STYLE =
+  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 // Paint uses feature-state for hover (GPU-direct, no React re-render)
 // and feature-state for selected (set on click)
 const FILL_LAYER = {
-  id: 'neighborhoods-fill',
-  type: 'fill' as const,
+  id: "neighborhoods-fill",
+  type: "fill" as const,
   source: SOURCE_ID,
   paint: {
-    'fill-color': [
-      'case',
-      ['boolean', ['feature-state', 'selected'], false], '#4338ca',
-      ['boolean', ['feature-state', 'hover'], false], '#6366f1',
-      '#4f46e5',
+    "fill-color": [
+      "case",
+      ["boolean", ["feature-state", "selected"], false],
+      "#4338ca",
+      ["boolean", ["feature-state", "hover"], false],
+      "#6366f1",
+      "#4f46e5",
     ] as any,
-    'fill-opacity': [
-      'case',
-      ['boolean', ['feature-state', 'selected'], false], 0.55,
-      ['boolean', ['feature-state', 'hover'], false], 0.38,
+    "fill-opacity": [
+      "case",
+      ["boolean", ["feature-state", "selected"], false],
+      0.55,
+      ["boolean", ["feature-state", "hover"], false],
+      0.38,
       0.18,
     ] as any,
   },
 };
 
 const LINE_LAYER = {
-  id: 'neighborhoods-outline',
-  type: 'line' as const,
+  id: "neighborhoods-outline",
+  type: "line" as const,
   source: SOURCE_ID,
   paint: {
-    'line-color': [
-      'case',
-      ['boolean', ['feature-state', 'selected'], false], '#3730a3',
-      ['boolean', ['feature-state', 'hover'], false], '#6366f1',
-      '#4f46e5',
+    "line-color": [
+      "case",
+      ["boolean", ["feature-state", "selected"], false],
+      "#3730a3",
+      ["boolean", ["feature-state", "hover"], false],
+      "#6366f1",
+      "#4f46e5",
     ] as any,
-    'line-width': [
-      'case',
-      ['boolean', ['feature-state', 'selected'], false], 4,
-      ['boolean', ['feature-state', 'hover'], false], 2.5,
+    "line-width": [
+      "case",
+      ["boolean", ["feature-state", "selected"], false],
+      4,
+      ["boolean", ["feature-state", "hover"], false],
+      2.5,
       1.5,
     ] as any,
   },
@@ -65,10 +74,10 @@ function App() {
   const selectedIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    fetch('/atlanta-neighborhood.geojson')
-      .then(res => res.json())
-      .then(json => setData(json))
-      .catch(err => console.error('Error loading geojson:', err));
+    fetch(`${import.meta.env.BASE_URL}atlanta-neighborhood.geojson`)
+      .then((res) => res.json())
+      .then((json) => setData(json))
+      .catch((err) => console.error("Error loading geojson:", err));
   }, []);
 
   // ── Hover: pure feature-state, zero React re-renders ──────────────────────
@@ -89,15 +98,12 @@ function App() {
       }
       // Set new hover
       if (newId !== null) {
-        map.setFeatureState(
-          { source: SOURCE_ID, id: newId },
-          { hover: true },
-        );
+        map.setFeatureState({ source: SOURCE_ID, id: newId }, { hover: true });
       }
       hoveredIdRef.current = newId;
     }
 
-    map.getCanvas().style.cursor = newId !== null ? 'pointer' : '';
+    map.getCanvas().style.cursor = newId !== null ? "pointer" : "";
   }, []);
 
   const onMouseLeave = useCallback(() => {
@@ -110,7 +116,7 @@ function App() {
       );
       hoveredIdRef.current = null;
     }
-    map.getCanvas().style.cursor = '';
+    map.getCanvas().style.cursor = "";
   }, []);
 
   // ── Click: feature-state for selected + React state for panel ─────────────
@@ -131,10 +137,7 @@ function App() {
 
     // Apply new selection
     if (newId !== null) {
-      map.setFeatureState(
-        { source: SOURCE_ID, id: newId },
-        { selected: true },
-      );
+      map.setFeatureState({ source: SOURCE_ID, id: newId }, { selected: true });
     }
 
     selectedIdRef.current = newId;
@@ -161,9 +164,9 @@ function App() {
       <Map
         ref={mapRef}
         initialViewState={ATLANTA_CENTER}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: "100%", height: "100%" }}
         mapStyle={MAP_STYLE}
-        interactiveLayerIds={['neighborhoods-fill']}
+        interactiveLayerIds={["neighborhoods-fill"]}
         onClick={onMapClick}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
@@ -186,7 +189,9 @@ function App() {
         <p className="text-[17px] font-extrabold text-indigo-950 tracking-tight leading-none">
           Atlanta Neighborhoods
         </p>
-        <p className="text-[12px] text-gray-500 mt-1">Click a neighborhood to explore</p>
+        <p className="text-[12px] text-gray-500 mt-1">
+          Click a neighborhood to explore
+        </p>
       </div>
 
       {/* ── Side panel ── */}
@@ -211,48 +216,70 @@ function App() {
             </h2>
 
             {p.OLDNAME && p.OLDNAME !== p.NAME && (
-              <p className="text-indigo-200 text-xs mt-1">Formerly: {p.OLDNAME}</p>
+              <p className="text-indigo-200 text-xs mt-1">
+                Formerly: {p.OLDNAME}
+              </p>
             )}
           </div>
 
           {/* Stats row */}
           <div className="grid grid-cols-3 border-b border-indigo-50">
             {[
-              { label: 'Acres', value: p.ACRES?.toFixed(1) ?? '—' },
-              { label: 'Sq MI', value: p.SQMILES?.toFixed(2) ?? '—' },
-              { label: 'NPU', value: p.NPU ?? '—' },
+              { label: "Acres", value: p.ACRES?.toFixed(1) ?? "—" },
+              { label: "Sq MI", value: p.SQMILES?.toFixed(2) ?? "—" },
+              { label: "NPU", value: p.NPU ?? "—" },
             ].map(({ label, value }) => (
-              <div key={label} className="py-4 text-center border-r border-indigo-50 last:border-r-0">
-                <p className="text-lg font-extrabold text-indigo-600 leading-none">{value}</p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mt-1">{label}</p>
+              <div
+                key={label}
+                className="py-4 text-center border-r border-indigo-50 last:border-r-0"
+              >
+                <p className="text-lg font-extrabold text-indigo-600 leading-none">
+                  {value}
+                </p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mt-1">
+                  {label}
+                </p>
               </div>
             ))}
           </div>
 
           {/* Details */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mb-4">Details</p>
+            <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mb-4">
+              Details
+            </p>
 
             {[
-              { label: 'Object ID', value: p.OBJECTID },
-              { label: 'Last Edited By', value: p.LAST_EDITED_USER ?? '—' },
+              { label: "Object ID", value: p.OBJECTID },
+              { label: "Last Edited By", value: p.LAST_EDITED_USER ?? "—" },
               {
-                label: 'Last Edited',
+                label: "Last Edited",
                 value: p.LAST_EDITED_DATE
-                  ? new Date(p.LAST_EDITED_DATE).toLocaleDateString('en-US', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                  })
-                  : '—',
+                  ? new Date(p.LAST_EDITED_DATE).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "—",
               },
             ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between items-start py-2.5 border-b border-gray-100 last:border-0">
-                <span className="text-[12px] text-gray-400 font-semibold">{label}</span>
-                <span className="text-[12px] text-gray-800 font-semibold text-right max-w-40">{String(value)}</span>
+              <div
+                key={label}
+                className="flex justify-between items-start py-2.5 border-b border-gray-100 last:border-0"
+              >
+                <span className="text-[12px] text-gray-400 font-semibold">
+                  {label}
+                </span>
+                <span className="text-[12px] text-gray-800 font-semibold text-right max-w-40">
+                  {String(value)}
+                </span>
               </div>
             ))}
 
             <div className="mt-5">
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1.5">Global ID</p>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1.5">
+                Global ID
+              </p>
               <p className="font-mono text-[10px] text-indigo-500 bg-indigo-50 rounded-lg px-3 py-2 break-all leading-relaxed">
                 {p.GLOBALID}
               </p>
